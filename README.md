@@ -2,7 +2,9 @@
 # gbL.jsMop
 
 ## Preamble
-Javascript library for message passing in javascript. "mop" is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct). 
+Javascript library for message passing in javascript. "mop" is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct).
+
+http://www.purl.org/stefan_ram/pub/doc_kay_oop_en
 
 ## Environment
 Designed to work specifically in the browser, or in Node, but should work in most CommonJS environments.
