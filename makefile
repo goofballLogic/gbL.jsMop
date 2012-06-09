@@ -1,9 +1,6 @@
-all = test test-dot test-min test-list
+all = test test-dot browser-test
 
 .PHONY: $(all)
-
-
-PATH := $(PATH):/usr/local/bin
 
 runner = ./node_modules/.bin/mocha
 openinbrowser = open
@@ -14,8 +11,9 @@ test:
 	@$(runner) --reporter spec $(testfiles)
 
 browser-test:
-	$(browserify) -o ./test-browser/browsertests.js $(testfiles)
-	open ./test-browser/browserTests.html
+	@cp ./node_modules/mocha/mocha.* ./test-browser
+	@$(browserify) -o ./test-browser/browsertests.js $(testfiles)
+	@open ./test-browser/browserTests.html
 
 test-dot:
 	@$(runner) --reporter dot $(testfiles)
