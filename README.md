@@ -4,7 +4,8 @@
 
 Sunday, 10 June 2010  
 Version 0.9.3  
-N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions.
+N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions: disqus at
+http://goofballLogic.github.com/gbL.jsMop
 
 ## Preamble
 This is a library for message passing in javascript. The "mop" in jsMop is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct).
