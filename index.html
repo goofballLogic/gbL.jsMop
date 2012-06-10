@@ -111,7 +111,7 @@ npm install expect.js
 
 <p>or</p>
 
-<pre><code>var mop = new require("gbL.jsMop").Mop();
+<pre><code>var mop = new require("gbL-jsMop").Mop();
 </code></pre>
 
 <h4>Sending</h4>
@@ -197,7 +197,7 @@ console.log("Registered receivers: " + registered.join(", ");
 
 <p>and then as part of bootstrapping, include the console-logger:</p>
 
-<pre><code>var mop = new require("gbL.jsMop").Mop();
+<pre><code>var mop = new require("gbL-jsMop").Mop();
 mop.boot({
     "logger": require("console-logger"),
     "worker": require("important-worker-module"),
