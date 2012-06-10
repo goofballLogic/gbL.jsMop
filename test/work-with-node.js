@@ -4,7 +4,7 @@ var jsmop = require("../gbL.jsMop"),
 
 var mop = new jsmop.Mop();
 
-describe("Given require('gbL.jsMop')", function() {
+describe("Given require('gbL-jsMop')", function() {
 
 	it("the boot function should be available", function() {
 		expect(mop.boot).to.be.a("function");
