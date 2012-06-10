@@ -270,7 +270,7 @@ You may wish to use an adapter to send and receive messages, especially when you
         
 		function dataGet(toGet) {
 			return mop
-				.send(configuration.baseUrl, "orders")
+				.send(configuration.baseUrl, toGet)
 				.as("ajax GET");
 		}
 		
