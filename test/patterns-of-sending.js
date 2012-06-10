@@ -19,7 +19,7 @@ describe("Given a registered object with handlers", function() {
 	mop.register(subject);
 
 	describe("When a message is sent using space delimited subject", function() {
-		mop.send("yo sushi").withSubject("general abuse");
+		mop.send("yo sushi").as("general abuse");
 
 		it("the object should receive the message through its handler", function() {
 			expect(subject.received.abuse).to.contain("yo sushi");

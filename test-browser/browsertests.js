@@ -344,8 +344,15 @@ exports.extname = function(path) {
 
 });
 
+require.define("/package.json", function (require, module, exports, __dirname, __filename) {
+module.exports = {"main":"gbL.jsMop.js"}
+});
+
 require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, __filename) {
 (function() {
+	
+	// VERSION: 0.9.3
+	// License: MIT
 	
 	// namespace and exports
 	var jsMop = (typeof(module) == "undefined") ?
@@ -2177,7 +2184,7 @@ describe("Given an object with handlers", function() {
 		mop.register(subject);
 
 		describe("and when a message is sent", function() {
-			mop.send("dziuba").withSubject("general", "abuse");
+			mop.send("dziuba").as("general", "abuse");
 		
 			it("the object should receive the message through its handler", function() {
 				expect(subject.received.abuse).to.contain("dziuba");
@@ -2187,7 +2194,7 @@ describe("Given an object with handlers", function() {
 		describe("but when the object's handler is Unregistered and when message is sent", function() {
 			mop
 				.unregisterHandler(subject.receive_general_abuse)
-				.send("zoomba").withSubject("general", "abuse");
+				.send("zoomba").as("general", "abuse");
 
 			it("the object should not receive the message", function() {
 				expect(subject.received.abuse).to.not.contain("zoomba");
@@ -2197,7 +2204,7 @@ describe("Given an object with handlers", function() {
 		describe("but when the object is unregistered and when message is sent", function() {
 			mop
 				.unregister(subject)
-				.send("hugs").withSubject("general love");
+				.send("hugs").as("general love");
 
 			it("the object should not receive the message", function() {
 				expect(subject.received.love).to.be.empty();
@@ -2413,7 +2420,7 @@ describe("Given a registered object with handlers", function() {
 	mop.register(subject);
 
 	describe("When a message is sent using space delimited subject", function() {
-		mop.send("yo sushi").withSubject("general abuse");
+		mop.send("yo sushi").as("general abuse");
 
 		it("the object should receive the message through its handler", function() {
 			expect(subject.received.abuse).to.contain("yo sushi");
@@ -2936,7 +2943,7 @@ require.define("/test/work-with-node.js", function (require, module, exports, __
 
 var mop = new jsmop.Mop();
 
-describe("Given require('gbL.jsMop')", function() {
+describe("Given require('gbL-jsMop')", function() {
 
 	it("the boot function should be available", function() {
 		expect(mop.boot).to.be.a("function");
