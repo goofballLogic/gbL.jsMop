@@ -357,7 +357,7 @@ mop.send().as("hello hell");
 
     function dataGet(toGet) {
         return mop
-            .send(configuration.baseUrl, "orders")
+            .send(configuration.baseUrl, toGet)
             .as("ajax GET");
     }
 
