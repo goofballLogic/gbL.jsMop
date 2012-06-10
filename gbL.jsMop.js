@@ -1,5 +1,8 @@
 (function() {
 	
+	// VERSION: 0.9.3
+	// License: MIT
+	
 	// namespace and exports
 	var jsMop = (typeof(module) == "undefined") ?
 		((window.gbL = window.gbL || {}).jsMop = {}) :
