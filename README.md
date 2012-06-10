@@ -34,3 +34,21 @@ and then
 
     make browser-test
 
+## Example
+Example usage can be found in the /test/scenarios folder.
+
+### Basics
+First step is to spin up a hub for the messages:
+
+    var mop = new gbL.jsMop.Mop();
+
+or
+
+    var mop = new require("gbL.jsMop").Mop();
+
+Then, if you want to send a message, you can just:
+
+    mop.send("Hello world").as("test");
+
+Which sends a message with subject _*test*_ and payload of a _*string Hello world*_.
+
