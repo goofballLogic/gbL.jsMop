@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=640" />
+
+    <link rel="stylesheet" href="stylesheets/core.css" media="screen"/>
+    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-device-width:640px)"/>
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+
+    <script type="text/javascript" src="javascripts/modernizr.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="javascripts/headsmart.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function () {
+        $('#main_content').headsmart()
+      })
+    </script>
+    <title>Gbl.jsmop by goofballLogic</title>
+  </head>
+
+  <body>
+    <a id="forkme_banner" href="https://github.com/goofballLogic/gbL.jsMop">View on GitHub</a>
+    <div class="shell">
+
+      <header>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <h1>Gbl.jsmop</h1>
+            <h2>Message passing for javascript</h2>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+      </header>
+
+      <section id="downloads">
+        <span class="inner">
+          <a href="https://github.com/goofballLogic/gbL.jsMop/zipball/master" class="zip"><em>download</em> .ZIP</a><a href="https://github.com/goofballLogic/gbL.jsMop/tarball/master" class="tgz"><em>download</em> .TGZ</a>
+        </span>
+      </section>
+
+
+      <span class="banner-fix"></span>
+
+
+      <section id="main_content">
+        <h1>gbL.jsMop</h1>
+
+<p>Sunday, 10 June 2010<br>
+Version 0.9.3<br>
+N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions.</p>
+
+<h2>Preamble</h2>
+
+<p>This is a library for message passing in javascript. The "mop" in jsMop is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct).</p>
+
+<p><a href="http://www.purl.org/stefan_ram/pub/doc_kay_oop_en">http://www.purl.org/stefan_ram/pub/doc_kay_oop_en</a></p>
+
+<h2>Environment</h2>
+
+<p>Designed to work specifically in the browser, or in Node, but should work in most CommonJS environments.</p>
+
+<h2>Running/Building tests</h2>
+
+<h4>Without a browser (mocha)</h4>
+
+<p>You will need to</p>
+
+<pre><code>npm install mocha
+npm install expect.js
+</code></pre>
+
+<p>and then</p>
+
+<pre><code>make test
+</code></pre>
+
+<h4>In the browser</h4>
+
+<p>Just browse to </p>
+
+<pre><code>test-browser/browserTests.html
+</code></pre>
+
+<h4>Building (and opening) the browser tests</h4>
+
+<p>You will need to</p>
+
+<pre><code>npm install browserify
+</code></pre>
+
+<p>and then</p>
+
+<pre><code>make browser-test
+</code></pre>
+
+<h2>Examples</h2>
+
+<p>Example usage can be found in the /test/scenarios folder.</p>
+
+<h3>Basic usage</h3>
+
+<h4>First step is to spin up a hub for the messages:</h4>
+
+<pre><code>var mop = new gbL.jsMop.Mop();
+</code></pre>
+
+<p>or</p>
+
+<pre><code>var mop = new require("gbL.jsMop").Mop();
+</code></pre>
+
+<h4>Sending</h4>
+
+<p>Then, to send a message:</p>
+
+<pre><code>mop.send("Hello world").as("test");
+</code></pre>
+
+<p>which sends a message with subject <strong><em>test</em></strong> and payload of <strong><em>Hello world</em></strong>.</p>
+
+<h4>Receiving</h4>
+
+<p>If I am an object wanting to receive this sort of message, I would include a method named <strong>receive_test</strong>:</p>
+
+<pre><code>var receiver = {
+    receive_test: function(data) {
+        console.log(data);
+    }
+};
+</code></pre>
+
+<p>and I would register with the hub to receive messages:</p>
+
+<pre><code>mop.register(receiver, "My first receiver");
+</code></pre>
+
+<h5><em>or</em></h5>
+
+<p>if I don't wish to register as an object, I can regsiter a call back function:</p>
+
+<pre><code>mop.registerHandler("test", function(data) {
+    console.log(data);
+});
+</code></pre>
+
+<h2>Debugging</h2>
+
+<p>There are a few tools to help with debugging message passing. For analysis of registered objects and handlers, just send a census message:</p>
+
+<pre><code>var registered = mop.send().as("census");
+console.log("Registered receivers: " + registered.join(", ");
+</code></pre>
+
+<p>You may also wish to turn on console logging by using:</p>
+
+<pre><code>mop.debug = true;
+</code></pre>
+
+<p>or</p>
+
+<pre><code>mop.send.debug = true;
+</code></pre>
+
+<h2>Bootstrapping modules</h2>
+
+<p>Say you have a set of modules which contain objects wishing to participate in message exchange through a given mop. </p>
+
+<p>For example, in Node, you might have a console-logger.js:</p>
+
+<pre><code>(function(context) {
+
+    var mop;
+
+    context.bootstrap = {
+        init: function(initMop) {
+            mop = initMop;
+            initMop.Register(loggingSingleton, "Console logger");
+        }
+    }
+
+    var loggingSingleton = new function() {
+        return {
+            receive_log: function(data) {
+                var label = mop.topics.slice(1).join(" ");
+                console.log(label, data);
+            }
+        };
+    }();
+
+})(module.exports);
+</code></pre>
+
+<p>and then as part of bootstrapping, include the console-logger:</p>
+
+<pre><code>var mop = new require("gbL.jsMop").Mop();
+mop.boot({
+    "logger": require("console-logger"),
+    "worker": require("important-worker-module"),
+    "another": require("another-important-worker-module")
+});
+</code></pre>
+
+<p>which will mean that e.g. the following will print my friend's name to the console:</p>
+
+<pre><code>mop.send("Lisa Jue Bishop").as("log the name of my dear friend");
+</code></pre>
+
+<h5>Or</h5>
+
+<p>In the browser, you might have a ticker object:</p>
+
+<pre><code>(function(context) {
+    var mop;
+
+    context.Ticker = {
+        bootstrap: {
+            init: function(jsMop) {
+                mop = jsMop;
+                mop.register(new Ticker(), "Ticker");
+            }
+        }
+    };
+
+    function Ticker() {
+        // private state and behaviours
+        var cancelled = false;
+        function tick() {
+            mop.send().as("tick");
+            if(!cancelled) setTimeout(100, tick);
+        }
+        // message receivers
+        return {
+            receive_cancel_ticker: function() {
+                cancelled = true;
+            }
+        }
+    }
+
+})(gbL.Stocks || { gbL.Stocks = {} });
+</code></pre>
+
+<p>which you could then boot as so:</p>
+
+<pre><code>var mop = new gbL.jsMop.Mop();
+mop.boot({
+    "ticker": gbL.Stocks.Ticker,
+    "symbol-list": gbL.Stocks.SymbolLister
+});
+</code></pre>
+
+<p>which will cause <code>tick</code> messages to be sent until:</p>
+
+<pre><code>mop.send().as("cancel ticker");
+</code></pre>
+
+<p>is sent.</p>
+
+<h2>Further patterns</h2>
+
+<h4>Partial subject match</h4>
+
+<p>If you want to accept messages about a more general subject than those specified for the messages, you can receive messages which match the start of the subject:</p>
+
+<pre><code>function HelloListener() {
+    this.receive_hello = function() {
+        console.log(mop.subject);
+    };
+}
+</code></pre>
+
+<p>would receive:</p>
+
+<pre><code>mop.send().as("hello world");
+</code></pre>
+
+<p>but would also receive:</p>
+
+<pre><code>mop.send().as("hello heaven");
+mop.send().as("hello hell");
+</code></pre>
+
+<h4>Filtering messages</h4>
+
+<p>If you want to filter the messages received for a given subject, you can attaching a filtering function, like so:</p>
+
+<pre><code>function BeerWatcher() {
+    this.receive_important_notification = function(notification) {
+        console.log("CRITICAL: " + notification);
+    };
+    this.receive_important_notification.filter = function(topics, data)
+    {
+        // only interested in notifications mentioning beer in their subject
+        return ~topics.join(" ").indexOf("beer");
+    };
+}
+</code></pre>
+
+<h4>Filtering lots of handlers</h4>
+
+<p>If you have an object which only wants to receive messages which mention a specific ID, you can:</p>
+
+<pre><code>function CalculationNode(nodeId, calculationStrategy) {
+    // private state and behaviour
+    var parameters, lastResult;
+    function reset(preserveResult) { 
+        parameters = [];
+        preserveResult || lastResult = null; 
+    }
+    function execute() {
+        return (lastResult = calculationStrategy.apply(this, parameters));
+    }
+    reset();
+
+    // message receivers
+    this.receive_reset_parameters = function() {
+        reset(true);
+    };
+    this.receive_parameterise = function() {
+        for(var i in arguments) parameters.push(arguments[i]);
+    };
+    this.receive_calculate = function() {
+        mop.send(execute()).as("result for node " + nodeId);
+    };
+
+    mop.setReceiveFilters(this, function(topics, data) {
+        // all the above, only for messages about this node (by Id)
+        return ~topics.indexOf("node " + nodeId);
+    });
+
+    // unfiltered receivers
+    this.receive_global_reset = function() {
+        reset();
+    };
+    this.receive_return_results = function() {
+        return new function() { this[nodeId] = lastResult; };
+    }
+}
+</code></pre>
+
+<h4>Adapter</h4>
+
+<p>You may wish to use an adapter to send and receive messages, especially when you want to mix the message-passing paradigm with calling methods directly. For example, using the revealing module pattern, you might do something like:</p>
+
+<pre><code>function ServiceAgent() {
+
+    var configuration = null;
+    var fetched = [];
+
+    function saveConfiguration(config) {
+        configuration = $(config).clone();
+    }
+
+    function dataGet(toGet) {
+        return mop
+            .send(configuration.baseUrl, "orders")
+            .as("ajax GET");
+    }
+
+    function injestData(data) {
+        fetched.push(data);
+    }
+
+    // inner facet (mop adapter)
+    mop.register({
+        receive_configuration: saveConfiguration,
+        receive_data_received: injestData,
+    }, "Service Agent");
+
+    // outer facet (revealed methods)
+    return {
+        listOrders: function() {
+            var data = null;
+            if(dataGet("orders")) data = fetched.pop();
+            return data;
+        }
+    };
+}
+</code></pre>
+
+<p>An object constructed by this function will expect to collaborate with</p>
+
+<ul>
+<li>An object whose responsibility is to broadcast configuration (sending messages with subject "configuration")</li>
+<li>An object whose responsibility is to make AJAX calls (receiving subjects beginning with "ajax", and sending back the data with subject "data received")</li>
+</ul><p>And it exposes a method which can be called directly as so:</p>
+
+<pre><code>var serviceAgent = new ServiceAgent();
+var orders = serviceAgent.listOrders();
+</code></pre>
+      </section>
+
+      <footer>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <p>this project by <a href="https://github.com/goofballLogic">goofballLogic</a> can be found on <a href="https://github.com/goofballLogic/gbL.jsMop">GitHub</a></p>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+        <p>Generated with <a href="http://pages.github.com">GitHub Pages</a> using Merlot</p>
+        <span class="octocat"></span>
+      </footer>
+
+    </div>
+
+    
+  </body>
+</html>
