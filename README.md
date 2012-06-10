@@ -51,7 +51,7 @@ Example usage can be found in the /test/scenarios folder.
 
 or
 
-    var mop = new require("gbL.jsMop").Mop();
+    var mop = new require("gbL-jsMop").Mop();
 
 ####Sending
 
@@ -125,7 +125,7 @@ For example, in Node, you might have a console-logger.js:
 	
 and then as part of bootstrapping, include the console-logger:
 
-	var mop = new require("gbL.jsMop").Mop();
+	var mop = new require("gbL-jsMop").Mop();
 	mop.boot({
 		"logger": require("console-logger"),
 		"worker": require("important-worker-module"),
