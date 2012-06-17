@@ -1,8 +1,7 @@
 
-
 # gbL.jsMop
 
-Sunday, 10 June 2010  
+Sunday, 10 June 2012  
 Version 0.9.3  
 N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions: disqus at
 http://goofballLogic.github.com/gbL.jsMop
