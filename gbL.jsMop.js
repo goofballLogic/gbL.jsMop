@@ -16,18 +16,25 @@
 		return null;
 	}
 
+	function indexOf(list, item) {
+		if(list.indexOf) return list.indexOf(item);
+		for(var i in list) {
+			if(list[i]===item) return i;
+		}
+		return -1;
+	}
+
 	function argsToArr(args) {
 		return Array.prototype.slice.apply(args);
 	}
 
 	function removeWiresForHandler(handler, handlerRegister) {
-		if(!handlerRegister.hasOwnProperty(handler)) return;
-		var wires = handlerRegister[handler].wires;
+		var wires = handlerRegister.find(handler);
 		for(var i = 0; i < wires.length; i++) {
 			var wire = wires[i];
 			wire.hub.removeWire(wire);
 		}
-		handlerRegister[handler].wires = [];
+		wires.length = 0;
 	}
 
 	function findReceiveMethodProperties(owner) {
@@ -76,13 +83,37 @@
 		};
 	};
 
-	
+	var HandlerRegister = function() {
+		var handlers = [];
+		var registrations = [];
+		this.listHandlers = function() {
+			return handlers.slice(0);
+		};
+		this.find = function(handler) {
+			var i = indexOf(handlers, handler);
+			if(i < 0) {
+				handlers.push(handler);
+				i = indexOf(handlers, handler);
+				registrations[i] = [];
+			}
+			return registrations[i];
+		};
+		this.remove = function(handler) {
+			var i = indexOf(handlers, handler);
+			if(i > -1) {
+				handlers.splice(i, 1);
+				registrations.splice(i, 1);
+			}
+		};
+	};
+
 	// mop constructor
 
 	jsMop.Mop = function() {
 	
 		var rootHub = new Hub("root"),
-			handlerRegister = {};
+			handlerRegister = new HandlerRegister()
+			;
 
 		// revealed members
 		var mop = {
@@ -133,8 +164,7 @@
 		}
 
 		function reset() {
-			var handlerList = [];
-			for(var key in handlerRegister) handlerList.push(key);
+			var handlerList = handlerRegister.listHandlers();
 			for(var i in handlerList){
 				mop.unregisterHandler(handlerList[i]);
 			}
@@ -155,18 +185,16 @@
 		}
 
 		function unregisterObject(toUnregister) {
-			for(var oname in toUnregister) {
-				if(oname.length > 8 && oname.substr(0, 8) == "receive_") {
-					var handler = toUnregister[oname];
-					mop.unregisterHandler(handler);
-				}
+			var actions = findReceiveMethodProperties(toUnregister);
+			for(var i in actions) {
+				mop.unregisterHandler(toUnregister[actions[i]]);
 			}
 			return mop;
 		}
 
 		function unregisterHandler(handler) {
 			removeWiresForHandler(handler, handlerRegister);
-			delete handlerRegister[handler];
+			handlerRegister.remove(handler);
 			return mop;
 		}
 
@@ -198,13 +226,10 @@
 
 			hub.wires.push(wire);
 
-			if(typeof(handlerRegister[handler])=="undefined") handlerRegister[handler] = { hubs: [], wires: [] };
-			var register = handlerRegister[handler] || { hubs: [], wires: [] };
-			handlerRegister[handler] = register;
-			register.hubs.push(hub);
-			register.wires.push(wire);
+			var registration = handlerRegister.find(handler);
+			registration.push(wire);
 
-			if(mop.debug || mop.registerHandler.debug) console.log("Registered", objectName || "anon.", topicListCopy, wire, hub);
+			if(mop.debug || mop.registerHandler.debug) console.log("Registered", ownerName || "anon.", topicListCopy, wire, hub);
 			
 			return mop;
 		}

@@ -7,7 +7,8 @@ describe("Given a temporary need for a receiver", function() {
 	var mop = new jsmop.Mop();
 	describe("When I send within a registration closure", function() {
 
-		mop.withRegistered({ receive_something: function(message) { received.push(message); } }, function() {
+		var testReceiver = { receive_something: function(message) { received.push(message); } };
+		mop.withRegistered(testReceiver, function() {
 			mop.send("hello").as("something");
 		});
 
