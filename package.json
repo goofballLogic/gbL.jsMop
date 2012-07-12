@@ -2,7 +2,7 @@
   "author": "Andrew Stewart Gibson <andrew@goofballLogic.com>",
   "name": "gbL-jsMop",
   "description": "Message passing library",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "homepage": "http://goofballLogic.github.com/gbL.jsMop",
   "repository": {
     "type": "git",
