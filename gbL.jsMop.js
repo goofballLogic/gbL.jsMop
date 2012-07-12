@@ -153,7 +153,7 @@
 		function boot(context) {
 			for(var oname in context){
 				var o = context[oname];
-				if(o!==null && o.hasOwnProperty("bootstrap") && (o.bootstrap!==null)) {
+				if(o && o.hasOwnProperty("bootstrap") && (o.bootstrap!==null)) {
 					if(typeof(o.bootstrap.init)==="function") {
 						o.bootstrap.init(mop);
 					}
