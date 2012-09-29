@@ -225,11 +225,16 @@
 		function boot(context) {
 			for(var oname in context){
 				var o = context[oname];
+
 				if(o && o.hasOwnProperty("bootstrap") && (o.bootstrap!==null)) {
+					if(typeof(o.bootstrap)==="function") {
+						o.bootstrap(mop);
+					}
 					if(typeof(o.bootstrap.init)==="function") {
 						o.bootstrap.init(mop);
 					}
 				}
+
 			}
 
 			return mop;
