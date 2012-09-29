@@ -351,7 +351,7 @@ module.exports = {"main":"gbL.jsMop.js"}
 require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, __filename) {
 (function() {
 	
-	// VERSION: 0.9.3
+	// VERSION: 0.9.7
 	// License: MIT
 	
 	// namespace and exports
@@ -367,35 +367,114 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 		return null;
 	}
 
+	function indexOf(list, item) {
+		if(list.indexOf) return list.indexOf(item);
+		for(var i in list) {
+			if(list[i]===item) return i;
+		}
+		return -1;
+	}
+
 	function argsToArr(args) {
 		return Array.prototype.slice.apply(args);
 	}
 
 	function removeWiresForHandler(handler, handlerRegister) {
-		if(!handlerRegister.hasOwnProperty(handler)) return;
-		var wires = handlerRegister[handler].wires;
+		var wires = handlerRegister.find(handler);
 		for(var i = 0; i < wires.length; i++) {
 			var wire = wires[i];
 			wire.hub.removeWire(wire);
 		}
-		handlerRegister[handler].wires = [];
+		wires.length = 0;
 	}
 
-	function findReceiveMethodProperties(owner) {
+	function MethodDef(funcOwner, funcName, topics) {
+		this.topics = topics;
+		this.action = funcOwner[funcName];
+		this.substitute = function(wrapper) { funcOwner[funcName] = wrapper; };
+	}
+
+	function findReceiveMethods(owner) {
 		var ret = [];
 		for(var propName in owner) {
 			if(propName.length > 8 && propName.substr(0, 8) == "receive_" && typeof(owner[propName]) == "function") {
-				ret.push(propName);
+				ret.push(
+					new MethodDef(owner, propName, propName.substr(8, propName.length - 8).split("_"))
+				);
+			}
+		}
+		var receives = owner.receive;
+		if(receives && typeof(receives) == "object") {
+			for(var ccName in receives) {
+				ret.push(
+					new MethodDef(receives, ccName, splitCamelCase(ccName))
+				);
 			}
 		}
 		return ret;
 	}
 
+	function findSendMethods(owner) {
+		var ret = [];
+		for(var propName in owner) {
+			if(propName.length > 5 && propName.substr(0, 5) == "send_" && typeof(owner[propName]) == "function") {
+				var topics = propName.substr(5, propName.length - 5).split("_");
+				ret.push(new MethodDef(owner, propName, topics));
+			}
+		}
+		var sends = owner.send;
+		if(sends && typeof(sends) == "object") {
+			for(var ccName in sends) {
+				ret.push(
+					new MethodDef(sends, ccName, splitCamelCase(ccName))
+				);
+			}
+		}
+		return ret;
+	}
+
+	function formatTopic(topic) {
+		if(!topic || topic==="") return topic;
+		if(casify(topic[1])>-1) return topic;
+		if(topic.length==11) return topic;
+		return topic[0].toLowerCase() + topic.substr(1, topic.length - 1);
+	}
+
+	function casify(ch) {
+		if(/[A-Z]/.test(ch)) return 1;
+		if(/[0-9]/.test(ch)) return 0;
+		return -1;
+	}
+
+	function splitCamelCase(name) {
+		var ret = [],
+			topic = "";
+
+		for(var i in name) {
+			if(topic==="") {
+				topic += name[i];
+			} else {
+				var lastCase = casify(topic.charAt(topic.length - 1)),
+					thisCase = casify(name[i]),
+					isSame = lastCase===thisCase,
+					isCamelHump = (lastCase === 1) && (thisCase === -1) && (topic.length === 1);
+
+				if(isSame || isCamelHump) {
+					topic += name[i];
+				} else {
+					ret.push(formatTopic(topic));
+					topic = name[i];
+				}
+			}
+		}
+		if(topic!=="") ret.push(formatTopic(topic));
+		return ret;
+	}
+
 	function setReceiveFilters(owner, filter) {
-		var actions = findReceiveMethodProperties(owner);
+		var actions = findReceiveMethods(owner);
 		for(var i in actions) {
-			var propName = actions[i];
-			owner[propName].filter = filter;
+			actions[i].action.filter = filter;
 		}
 	}
 
@@ -427,13 +506,37 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 		};
 	};
 
-	
+	var HandlerRegister = function() {
+		var handlers = [];
+		var registrations = [];
+		this.listHandlers = function() {
+			return handlers.slice(0);
+		};
+		this.find = function(handler) {
+			var i = indexOf(handlers, handler);
+			if(i < 0) {
+				handlers.push(handler);
+				i = indexOf(handlers, handler);
+				registrations[i] = [];
+			}
+			return registrations[i];
+		};
+		this.remove = function(handler) {
+			var i = indexOf(handlers, handler);
+			if(i > -1) {
+				handlers.splice(i, 1);
+				registrations.splice(i, 1);
+			}
+		};
+	};
+
 	// mop constructor
 
 	jsMop.Mop = function() {
 	
 		var rootHub = new Hub("root"),
-			handlerRegister = {};
+			handlerRegister = new HandlerRegister()
+			;
 
 		// revealed members
 		var mop = {
@@ -473,7 +576,7 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 		function boot(context) {
 			for(var oname in context){
 				var o = context[oname];
-				if(o!==null && o.hasOwnProperty("bootstrap") && (o.bootstrap!==null)) {
+				if(o && o.hasOwnProperty("bootstrap") && (o.bootstrap!==null)) {
 					if(typeof(o.bootstrap.init)==="function") {
 						o.bootstrap.init(mop);
 					}
@@ -484,8 +587,7 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 		}
 
 		function reset() {
-			var handlerList = [];
-			for(var key in handlerRegister) handlerList.push(key);
+			var handlerList = handlerRegister.listHandlers();
 			for(var i in handlerList){
 				mop.unregisterHandler(handlerList[i]);
 			}
@@ -496,29 +598,60 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 			if(!toRegister.hasOwnProperty("receive_census"))
 				toRegister.receive_census = function() { return objectName || toRegister.constructor.name; };
 
-			var actions = findReceiveMethodProperties(toRegister);
-			for(var i in actions) {
-				var propName = actions[i],
-					topicList = propName.substr(8).split("_");
-				mop.registerHandler(topicList.slice(0), toRegister[propName], toRegister, objectName);
+			var receiveActions = findReceiveMethods(toRegister);
+			for(var ri in receiveActions) {
+				var rAction = receiveActions[ri];
+				mop.registerHandler(rAction.topics, rAction.action, toRegister, objectName);
+			}
+
+			var sendActions = findSendMethods(toRegister);
+			for(var si in sendActions) {
+				var sAction = sendActions[si];
+				installSender(sAction.topics, sAction.action, toRegister, objectName, sAction.substitute);
 			}
 			return mop;
 		}
 
 		function unregisterObject(toUnregister) {
-			for(var oname in toUnregister) {
-				if(oname.length > 8 && oname.substr(0, 8) == "receive_") {
-					var handler = toUnregister[oname];
-					mop.unregisterHandler(handler);
-				}
+			var rActions = findReceiveMethods(toUnregister);
+			for(var ri in rActions) {
+				mop.unregisterHandler(rActions[ri].action);
+			}
+			var sActions = findSendMethods(toUnregister);
+			for(var si in sActions) {
+				uninstallSender(sActions[si].action);
 			}
 			return mop;
 		}
 
+		function uninstallSender(sender) {
+			var saftey = 100;
+			while(sender.uninstall && typeof(sender.uninstall) === "function" && (saftey--)>0) {
+				sender = sender.uninstall();
+			}
+		}
+
 		function unregisterHandler(handler) {
 			removeWiresForHandler(handler, handlerRegister);
-			delete handlerRegister[handler];
+			handlerRegister.remove(handler);
 			return mop;
+		}
+
+		function installSender(topicList, sender, owner, ownerName, substituteSender) {
+			var subject = topicList.join(" ");
+			if(topicList.length<1) throw("Incorrect sender - must have at least one topic");
+			var sendShim = function() {
+				var args = argsToArr(arguments);
+				var a = mop.send.apply(owner, args).as(subject);
+				var b = sender.apply(owner, args);
+				return (a && b) ? [a, b] : (a || b);
+			};
+			sendShim.uninstall = function() {
+				substituteSender(sender);
+				return sender;
+			};
+
+			substituteSender(sendShim);
 		}
 
 		function registerHandler(topicList, handler, owner, ownerName) {
@@ -549,13 +682,10 @@ require.define("/gbL.jsMop.js", function (require, module, exports, __dirname, _
 
 			hub.wires.push(wire);
 
-			if(typeof(handlerRegister[handler])=="undefined") handlerRegister[handler] = { hubs: [], wires: [] };
-			var register = handlerRegister[handler] || { hubs: [], wires: [] };
-			handlerRegister[handler] = register;
-			register.hubs.push(hub);
-			register.wires.push(wire);
+			var registration = handlerRegister.find(handler);
+			registration.push(wire);
 
-			if(mop.debug || mop.registerHandler.debug) console.log("Registered", objectName || "anon.", topicListCopy, wire, hub);
+			if(mop.debug || mop.registerHandler.debug) console.log("Registered", ownerName || "anon.", topicListCopy, wire, hub);
 			
 			return mop;
 		}
@@ -2216,6 +2346,46 @@ describe("Given an object with handlers", function() {
 });
 require("/test/auto-registration-of-handlers.js");
 
+require.define("/test/complex-handlers.js", function (require, module, exports, __dirname, __filename) {
+    var jsmop = require("../gbL.jsMop"),
+	expect = require("expect.js")
+	;
+
+describe("Given a registered handler with a toString method", function() {
+
+	var count = 0;
+
+	var handler = function() { count++; };
+	handler.toString = function() { return "spy"; }; // use case - when a sinon.spy is a handler
+
+	var mop = new jsmop.Mop();
+	mop.registerHandler("hello", handler, {}, "test");
+	mop.send().as("hello");
+
+	describe("When the handler is unregistered, and a message is sent again", function() {
+		mop.unregisterHandler(handler);
+		mop.send().as("hello");
+
+		it("Should not receive the message", function() {
+			expect(count).to.be(1);
+		});
+
+		describe("And when another handler with the same name is registered, and a message is again sent", function() {
+			var handler2 = function() { };
+			handler2.toString = function() { return "spy"; };
+			mop.registerHandler("hello", handler2, {}, "test");
+			mop.send().as("hello");
+
+			it("The original handler should not receive a message", function() {
+				expect(count).to.be(1);
+			});
+		});
+	});
+
+});
+});
+require("/test/complex-handlers.js");
+
 require.define("/test/patterns-of-receiving.js", function (require, module, exports, __dirname, __filename) {
     var jsmop = require("../gbL.jsMop"),
 	expect = require("expect.js"),
@@ -2272,6 +2442,41 @@ describe("Given an receiver", function() {
 			expect(topicLists[2]).to.eql(["subject", "two"]);
 		});
 
+	});
+});
+
+describe("Given a receive property", function() {
+
+	var received = [];
+
+	mop.reset().register({
+		receive: {
+			subjectOne : function(thing) {
+				received.push(["subject one", thing]);
+			},
+			subjectTwo : function(thing) {
+				received.push(["subject two", thing]);
+			},
+			ABCis42YearsOld: function(thing) {
+				received.push(["ABC is 42 years old", thing]);
+			}
+		}
+	});
+
+	describe("When a matching message is sent", function() {
+		mop.send("hello").as("subject one");
+
+		it("Should have been received", function() {
+			expect(received[0]).to.eql([ "subject one", "hello" ]);
+		});
+	});
+
+	describe("When a message with stupidly complex subject is sent", function() {
+		mop.send("hi").as("ABC is 42 years old");
+
+		it("Should have been received", function() {
+			expect(received[1]).to.eql(["ABC is 42 years old", "hi"]);
+		});
 	});
 });
 
@@ -2417,7 +2622,7 @@ describe("Given a registered object with handlers", function() {
 		}
 	};
 
-	mop.register(subject);
+	mop.reset().register(subject);
 
 	describe("When a message is sent using space delimited subject", function() {
 		mop.send("yo sushi").as("general abuse");
@@ -2434,6 +2639,136 @@ describe("Given a registered object with handlers", function() {
 			expect(subject.received.love).to.contain("yo su");
 		});
 	});
+
+});
+
+describe("Given a registered object with a send property", function() {
+
+	var originalSendReceived = [];
+
+	var iSubject = {
+		send: {
+			newOrderNameAndAddress : function(orderId, name, address) {
+				originalSendReceived.push({"orderId" : orderId, "name" : name, "address" : address });
+				return "retOriginalFunc";
+			}
+		}
+	};
+
+	mop.reset().register(iSubject);
+
+	var received = [];
+
+	mop.registerHandler("new order name and address", function(orderId, name, address) {
+		received.push({ "orderId" : orderId, "name" : name, "address" : address });
+		return "retHandlerFunc";
+	});
+
+	var hasOrderId = function(toSearch, orderId) {
+		for(var i in toSearch) {
+			if(toSearch[i].orderId == orderId) return true;
+		}
+		return false;
+	};
+
+	describe("When a message is sent through the registered interface", function() {
+
+		var returned = iSubject.send.newOrderNameAndAddress(1, "hello", "world");
+
+		it("should send the message as expected", function() {
+			expect(hasOrderId(received, 1)).to.equal(true);
+		});
+
+		it("and it should execute the original send function", function() {
+			expect(hasOrderId(originalSendReceived, 1)).to.equal(true);
+		});
+
+		it("and it should return values from the send handler", function() {
+			expect(returned).to.contain("retHandlerFunc");
+		});
+
+		it("and it should return values from the original send function", function() {
+			expect(returned).to.contain("retOriginalFunc");
+		});
+	});
+
+	describe("But when the object is unregistered", function() {
+
+		mop.unregister(iSubject);
+		iSubject.send.newOrderNameAndAddress(2, "hello", "world");
+
+		it("should not send the message any more", function() {
+			expect(hasOrderId(received, 2)).to.equal(false);
+		});
+
+		it("but original send function should still execute", function() {
+			expect(hasOrderId(originalSendReceived, 2)).to.equal(true);
+		});
+	});
+
+});
+
+describe("Given a registered object with send members", function() {
+
+	var originalSendReceived = [];
+
+	var iSubject = {
+		send_new_order_name_and_address : function(orderId, name, address) {
+			originalSendReceived.push( { "orderId" : orderId, "name" : name, "address" : address });
+			return "retOriginalFunc";
+		}
+	};
+
+	mop.reset().register(iSubject);
+
+	var received = [];
+
+	mop.registerHandler("new order name and address", function(orderId, name, address) {
+		received.push({ "orderId" : orderId, "name" : name, "address" : address });
+		return "retHandlerFunc";
+	});
+
+	var hasOrderId = function(toSearch, orderId) {
+		for(var i in toSearch) {
+			if(toSearch[i].orderId == orderId) return true;
+		}
+		return false;
+	};
+
+	describe("When a message is sent through the registered interface", function() {
+
+		var returned = iSubject.send_new_order_name_and_address(1, "hello", "world");
+
+		it("should send the message as expected", function() {
+			expect(hasOrderId(received, 1)).to.equal(true);
+		});
+
+		it("and it should execute the original send function", function() {
+			expect(hasOrderId(originalSendReceived, 1)).to.equal(true);
+		});
+
+		it("and it should return values from the send handler", function() {
+			expect(returned).to.contain("retHandlerFunc");
+		});
+
+		it("and it should return values from the original send function", function() {
+			expect(returned).to.contain("retOriginalFunc");
+		});
+	});
+
+	describe("But when the object is unregistered", function() {
+
+		mop.unregister(iSubject);
+		iSubject.send_new_order_name_and_address(2, "hello", "world");
+
+		it("should not send the message any more", function() {
+			expect(hasOrderId(received, 2)).to.equal(false);
+		});
+
+		it("but original send function should still execute", function() {
+			expect(hasOrderId(originalSendReceived, 2)).to.equal(true);
+		});
+	});
 });
 });
 require("/test/patterns-of-sending.js");
@@ -2448,7 +2783,8 @@ describe("Given a temporary need for a receiver", function() {
 	var mop = new jsmop.Mop();
 	describe("When I send within a registration closure", function() {
 
-		mop.withRegistered({ receive_something: function(message) { received.push(message); } }, function() {
+		var testReceiver = { receive_something: function(message) { received.push(message); } };
+		mop.withRegistered(testReceiver, function() {
 			mop.send("hello").as("something");
 		});
 

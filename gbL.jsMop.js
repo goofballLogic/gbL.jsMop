@@ -37,21 +37,93 @@
 		wires.length = 0;
 	}
 
-	function findReceiveMethodProperties(owner) {
+	function MethodDef(funcOwner, funcName, topics) {
+		this.topics = topics;
+		this.action = funcOwner[funcName];
+		this.substitute = function(wrapper) { funcOwner[funcName] = wrapper; };
+	}
+
+	function findReceiveMethods(owner) {
 		var ret = [];
 		for(var propName in owner) {
 			if(propName.length > 8 && propName.substr(0, 8) == "receive_" && typeof(owner[propName]) == "function") {
-				ret.push(propName);
+				ret.push(
+					new MethodDef(owner, propName, propName.substr(8, propName.length - 8).split("_"))
+				);
+			}
+		}
+		var receives = owner.receive;
+		if(receives && typeof(receives) == "object") {
+			for(var ccName in receives) {
+				ret.push(
+					new MethodDef(receives, ccName, splitCamelCase(ccName))
+				);
 			}
 		}
 		return ret;
 	}
 
+	function findSendMethods(owner) {
+		var ret = [];
+		for(var propName in owner) {
+			if(propName.length > 5 && propName.substr(0, 5) == "send_" && typeof(owner[propName]) == "function") {
+				var topics = propName.substr(5, propName.length - 5).split("_");
+				ret.push(new MethodDef(owner, propName, topics));
+			}
+		}
+		var sends = owner.send;
+		if(sends && typeof(sends) == "object") {
+			for(var ccName in sends) {
+				ret.push(
+					new MethodDef(sends, ccName, splitCamelCase(ccName))
+				);
+			}
+		}
+		return ret;
+	}
+
+	function formatTopic(topic) {
+		if(!topic || topic==="") return topic;
+		if(casify(topic[1])>-1) return topic;
+		if(topic.length==11) return topic;
+		return topic[0].toLowerCase() + topic.substr(1, topic.length - 1);
+	}
+
+	function casify(ch) {
+		if(/[A-Z]/.test(ch)) return 1;
+		if(/[0-9]/.test(ch)) return 0;
+		return -1;
+	}
+
+	function splitCamelCase(name) {
+		var ret = [],
+			topic = "";
+
+		for(var i in name) {
+			if(topic==="") {
+				topic += name[i];
+			} else {
+				var lastCase = casify(topic.charAt(topic.length - 1)),
+					thisCase = casify(name[i]),
+					isSame = lastCase===thisCase,
+					isCamelHump = (lastCase === 1) && (thisCase === -1) && (topic.length === 1);
+
+				if(isSame || isCamelHump) {
+					topic += name[i];
+				} else {
+					ret.push(formatTopic(topic));
+					topic = name[i];
+				}
+			}
+		}
+		if(topic!=="") ret.push(formatTopic(topic));
+		return ret;
+	}
+
 	function setReceiveFilters(owner, filter) {
-		var actions = findReceiveMethodProperties(owner);
+		var actions = findReceiveMethods(owner);
 		for(var i in actions) {
-			var propName = actions[i];
-			owner[propName].filter = filter;
+			actions[i].action.filter = filter;
 		}
 	}
 
@@ -175,27 +247,60 @@
 			if(!toRegister.hasOwnProperty("receive_census"))
 				toRegister.receive_census = function() { return objectName || toRegister.constructor.name; };
 
-			var actions = findReceiveMethodProperties(toRegister);
-			for(var i in actions) {
-				var propName = actions[i],
-					topicList = propName.substr(8).split("_");
-				mop.registerHandler(topicList.slice(0), toRegister[propName], toRegister, objectName);
+			var receiveActions = findReceiveMethods(toRegister);
+			for(var ri in receiveActions) {
+				var rAction = receiveActions[ri];
+				mop.registerHandler(rAction.topics, rAction.action, toRegister, objectName);
+			}
+
+			var sendActions = findSendMethods(toRegister);
+			for(var si in sendActions) {
+				var sAction = sendActions[si];
+				installSender(sAction.topics, sAction.action, toRegister, objectName, sAction.substitute);
 			}
 			return mop;
 		}
 
 		function unregisterObject(toUnregister) {
-			var actions = findReceiveMethodProperties(toUnregister);
-			for(var i in actions) {
-				mop.unregisterHandler(toUnregister[actions[i]]);
+			var rActions = findReceiveMethods(toUnregister);
+			for(var ri in rActions) {
+				mop.unregisterHandler(rActions[ri].action);
+			}
+			var sActions = findSendMethods(toUnregister);
+			for(var si in sActions) {
+				uninstallSender(sActions[si].action);
 			}
 			return mop;
+		}
+
+		function uninstallSender(sender) {
+			var saftey = 100;
+			while(sender.uninstall && typeof(sender.uninstall) === "function" && (saftey--)>0) {
+				sender = sender.uninstall();
+			}
 		}
 
 		function unregisterHandler(handler) {
 			removeWiresForHandler(handler, handlerRegister);
 			handlerRegister.remove(handler);
 			return mop;
+		}
+
+		function installSender(topicList, sender, owner, ownerName, substituteSender) {
+			var subject = topicList.join(" ");
+			if(topicList.length<1) throw("Incorrect sender - must have at least one topic");
+			var sendShim = function() {
+				var args = argsToArr(arguments);
+				var a = mop.send.apply(owner, args).as(subject);
+				var b = sender.apply(owner, args);
+				return (a && b) ? [a, b] : (a || b);
+			};
+			sendShim.uninstall = function() {
+				substituteSender(sender);
+				return sender;
+			};
+
+			substituteSender(sendShim);
 		}
 
 		function registerHandler(topicList, handler, owner, ownerName) {

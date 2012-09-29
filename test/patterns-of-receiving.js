@@ -56,6 +56,41 @@ describe("Given an receiver", function() {
 	});
 });
 
+describe("Given a receive property", function() {
+
+	var received = [];
+
+	mop.reset().register({
+		receive: {
+			subjectOne : function(thing) {
+				received.push(["subject one", thing]);
+			},
+			subjectTwo : function(thing) {
+				received.push(["subject two", thing]);
+			},
+			ABCis42YearsOld: function(thing) {
+				received.push(["ABC is 42 years old", thing]);
+			}
+		}
+	});
+
+	describe("When a matching message is sent", function() {
+		mop.send("hello").as("subject one");
+
+		it("Should have been received", function() {
+			expect(received[0]).to.eql([ "subject one", "hello" ]);
+		});
+	});
+
+	describe("When a message with stupidly complex subject is sent", function() {
+		mop.send("hi").as("ABC is 42 years old");
+
+		it("Should have been received", function() {
+			expect(received[1]).to.eql(["ABC is 42 years old", "hi"]);
+		});
+	});
+});
+
 describe("Given an object which has a handler filter", function() {
 
 	var thingStore = {
