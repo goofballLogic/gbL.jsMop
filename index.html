@@ -1,59 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
-    <meta charset='utf-8'>
+    <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="viewport" content="width=640" />
-
-    <link rel="stylesheet" href="stylesheets/core.css" media="screen"/>
-    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-device-width:640px)"/>
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
-
-    <script type="text/javascript" src="javascripts/modernizr.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script type="text/javascript" src="javascripts/headsmart.min.js"></script>
-    <script type="text/javascript">
-      $(document).ready(function () {
-        $('#main_content').headsmart()
-      })
-    </script>
     <title>Gbl.jsmop by goofballLogic</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
   </head>
-
   <body>
-    <a id="forkme_banner" href="https://github.com/goofballLogic/gbL.jsMop">View on GitHub</a>
-
-    <div class="shell">
 
       <header>
-        <span class="ribbon-outer">
-          <span class="ribbon-inner">
-            <h1>Gbl.jsmop</h1>
-            <h2>Message passing for javascript</h2>
-          </span>
-          <span class="left-tail"></span>
-          <span class="right-tail"></span>
-        </span>
+        <h1>Gbl.jsmop</h1>
+        <p>Message passing for javascript</p>
       </header>
 
-      <section id="downloads">
-        <span class="inner">
-          <a href="https://github.com/goofballLogic/gbL.jsMop/zipball/master" class="zip"><em>download</em> .ZIP</a><a href="https://github.com/goofballLogic/gbL.jsMop/tarball/master" class="tgz"><em>download</em> .TGZ</a>
-        </span>
-      </section>
+      <div id="banner">
+        <span id="logo"></span>
 
+        <a href="https://github.com/goofballLogic/gbL.jsMop" class="button fork"><strong>View On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/goofballLogic/gbL.jsMop/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/goofballLogic/gbL.jsMop/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+      </div><!-- end banner -->
 
-      <span class="banner-fix"></span>
-
-      
-
-      <section id="main_content">
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
         <h1>gbL.jsMop</h1>
-        <a href="#disqus_thread">disqus this</a>
-<p>Sunday, 10 June 2010<br>
-Version 0.9.3<br>
-N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions.</p>
-      
+
+<p>N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions: disqus at
+<a href="http://goofballLogic.github.com/gbL.jsMop">http://goofballLogic.github.com/gbL.jsMop</a></p>
+
 <h2>Preamble</h2>
 
 <p>This is a library for message passing in javascript. The "mop" in jsMop is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct).</p>
@@ -97,6 +87,136 @@ npm install expect.js
 
 <pre><code>make browser-test
 </code></pre>
+
+<h1>Version specific notes</h1>
+
+<p>Unless otherwise indicated, the material in the Pervious Versions section still applies</p>
+
+<h2>Up-to-date example (if below==tl;dr)</h2>
+
+<p>The constructor is divided into two sections:</p>
+
+<ol>
+<li>Define the messages received and/or sent</li>
+<li>Define business logic in functions</li>
+</ol><p>Below the sections are divided by the line "return I;"</p>
+
+<pre><code>function Controller() {
+
+    // I will both send and receive messages
+    var I = { receive: {}, send: {} };
+
+    // the "render view" message - intended for registered Views to receive
+    I.send.renderView = function(viewName, data, res){};
+
+    // the "model update request" message - intended for the model
+    I.send.modelUpdateRequest = function(command){};
+
+    // the router creates this message on receiving GET /documentList
+    I.receive.GETdocumentList = function(req, res) {
+        listDocuments(function(data) {
+            I.send.renderView("document-list", data, res);
+        });
+    };
+
+    return I;
+
+    function listDocuments(callback) {
+        // send a "list-documents" command to the model
+        I.send.modelUpdateRequest("list-documents", function(domain) {
+            callback(domain.documents);
+        });
+    }
+}
+</code></pre>
+
+<h2>New in version 0.9.7</h2>
+
+<p>Tuesday, 20 November 2012
+Version 0.9.7</p>
+
+<h3>New pattern of registering receive and send messages</h3>
+
+<p>The principle change in this version is a new facility to receive and send which allows a slightly cleaner syntax. It also encourages you to declare the messages you will send ahead-of-time.</p>
+
+<h4>"Interface" concept</h4>
+
+<p>Objects can now simulate declaration of an interface using the revealing module pattern. Often you will see this:</p>
+
+<pre><code>function Controller() {
+
+    var I = {
+        // public members here
+    };
+
+    return I;
+
+    // private functions here
+
+}
+</code></pre>
+
+<h4>Receiving and sending</h4>
+
+<p>An object wishing to receive and/or send should now declare a receive and or send attribute:</p>
+
+<pre><code>function Controller() {
+
+    var I = {
+        receive: {
+            // messages to receive here
+        },
+        send: {
+            //messages to send here
+        }
+    }
+
+    return I;
+
+    // private functions here
+}
+</code></pre>
+
+<h4>No more underscoring</h4>
+
+<p>Messages in these receive and send attributes should be declared using simple camel casing</p>
+
+<p>e.g.</p>
+
+<pre><code>this.receive_add_commit_message = function(stuff) {
+    // do something with the stuff received
+};
+</code></pre>
+
+<p>should now be written as</p>
+
+<pre><code>this.receive.addCommitMessage = function(stuff) {
+    // do something with the stuff received
+};
+</code></pre>
+
+<h4>Collect senders at the top</h4>
+
+<p>To make debugging easier, declare your senders at the top as (usually) empty functions:</p>
+
+<p>e.g.</p>
+
+<pre><code>this.send.addCommitMessage = function(stuff){};
+</code></pre>
+
+<p>after the object is registered, will send a message with subject "add commit message". The inclusion of parameters in the empty function definition is useful as documentation. In addition, you can add your own action which will be called after the message is sent.</p>
+
+<p>e.g.</p>
+
+<pre><code>this.send.addCommitMessage = function(stuff) {
+    log("A commit message has been sent");
+};
+</code></pre>
+
+<h2>New in Version 0.9.3</h2>
+
+<p>Sunday, 10 June 2012<br>
+Version 0.9.3  </p>
 
 <h2>Examples</h2>
 
@@ -392,35 +512,13 @@ mop.send().as("hello hell");
 <pre><code>var serviceAgent = new ServiceAgent();
 var orders = serviceAgent.listOrders();
 </code></pre>
-
-<div id="disqus_thread"></div>
-        <script type="text/javascript">
-            var disqus_shortname = 'goofballLogic'; 
-            (function() {
-                var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-                dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
-                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-            })();
-        </script>
-        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-        <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
       </section>
-
       <footer>
-        <span class="ribbon-outer">
-          <span class="ribbon-inner">
-            <p>this project by <a href="https://github.com/goofballLogic">goofballLogic</a> can be found on <a href="https://github.com/goofballLogic/gbL.jsMop">GitHub</a></p>
-          </span>
-          <span class="left-tail"></span>
-          <span class="right-tail"></span>
-        </span>
-        <p>Generated with <a href="http://pages.github.com">GitHub Pages</a> using Merlot</p>
-        <span class="octocat"></span>
+        <p>Project maintained by <a href="https://github.com/goofballLogic">goofballLogic</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></small></p>
       </footer>
-
     </div>
-
-
-      </body>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
 </html>
