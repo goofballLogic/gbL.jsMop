@@ -1,8 +1,6 @@
 
 # gbL.jsMop
 
-Sunday, 10 June 2012  
-Version 0.9.3  
 N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions: disqus at
 http://goofballLogic.github.com/gbL.jsMop
 
@@ -38,6 +36,122 @@ You will need to
 and then
 
     make browser-test
+
+# Version specific notes
+Unless otherwise indicated, the material in the Pervious Versions section still applies
+
+## Up-to-date example (if below==tl;dr)
+
+The constructor is divided into two sections:
+
+1. Define the messages received and/or sent
+2. Define business logic in functions
+ 
+Below the sections are divided by the line "return I;"
+
+    function Controller() {
+    
+		// I will both send and receive messages
+		var I = { receive: {}, send: {} };
+		
+		// the "render view" message - intended for registered Views to receive
+		I.send.renderView = function(viewName, data, res){};
+		
+		// the "model update request" message - intended for the model
+		I.send.modelUpdateRequest = function(command){};
+		
+		// the router creates this message on receiving GET /documentList
+		I.receive.GETdocumentList = function(req, res) {
+        	listDocuments(function(data) {
+        		I.send.renderView("document-list", data, res);
+        	});
+        };
+		
+		return I;
+		
+		function listDocuments(callback) {
+			// send a "list-documents" command to the model
+			I.send.modelUpdateRequest("list-documents", function(domain) {
+				callback(domain.documents);
+			});
+		}
+    }
+
+## New in version 0.9.7
+
+Tuesday, 20 November 2012
+Version 0.9.7
+
+### New pattern of registering receive and send messages
+The principle change in this version is a new facility to receive and send which allows a slightly cleaner syntax. It also encourages you to declare the messages you will send ahead-of-time.
+
+#### "Interface" concept
+Objects can now simulate declaration of an interface using the revealing module pattern. Often you will see this:
+
+    function Controller() {
+    
+		var I = {
+			// public members here
+		};
+    
+		return I;
+		
+		// private functions here
+		
+    }
+    
+#### Receiving and sending
+An object wishing to receive and/or send should now declare a receive and or send attribute:
+
+    function Controller() {
+    
+		var I = {
+			receive: {
+				// messages to receive here
+			},
+			send: {
+				//messages to send here
+			}
+		}
+		
+		return I;
+		
+		// private functions here
+    }
+
+#### No more underscoring
+Messages in these receive and send attributes should be declared using simple camel casing
+
+e.g.
+
+    this.receive_add_commit_message = function(stuff) {
+    	// do something with the stuff received
+    };
+
+should now be written as
+
+	this.receive.addCommitMessage = function(stuff) {
+		// do something with the stuff received
+	};
+
+#### Collect senders at the top
+To make debugging easier, declare your senders at the top as (usually) empty functions:
+
+e.g.
+
+    this.send.addCommitMessage = function(stuff){};
+    
+after the object is registered, will send a message with subject "add commit message". The inclusion of parameters in the empty function definition is useful as documentation. In addition, you can add your own action which will be called after the message is sent.
+
+e.g.
+
+    this.send.addCommitMessage = function(stuff) {
+    	log("A commit message has been sent");
+    };
+    
+## New in Version 0.9.3
+Sunday, 10 June 2012  
+Version 0.9.3  
 
 ## Examples
 Example usage can be found in the /test/scenarios folder.
