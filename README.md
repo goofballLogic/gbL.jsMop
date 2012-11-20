@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/goofballLogic/gbL.jsMop.png)](http://travis-ci.org/goofballLogic/gbL.jsMop)
 
 # gbL.jsMop
 
