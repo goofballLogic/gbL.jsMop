@@ -77,6 +77,32 @@ Below the sections are divided by the line "return I;"
 		}
     }
 
+An object of this type can be registered as normal:
+
+    var mop = new gbL.jsMop();
+    mop.register(new ns.Controller(), "Documents controller");
+    mop.register(new ns.ListDocumentsView(), "List documents view");
+    mop.reigster(new ns.DomainCommandProcessor(), "Command interface for the domain");
+
+or, using the bootstrap pattern (see below):
+
+    new gbL.jsMop().boot({
+        "controller" : require("./controllers/Controller.js"),
+        "documents view" : require("./views/ListDocuments.js"),
+        "domain command processor" : require("./model/CommandProcessor.js")
+    });
+    
+For this to work, Controller.js would have to include the bootstrapping code which allows modules to initialise themselves and register objects. It would end up looking something like:
+
+    module.exports.bootstrap = function(mop) {
+    	mop.register(new Controller(), "Documents controller");
+    };
+
+	function Controller() {
+		. . . code (as above) goes here . . .
+	}
+	
+
 ## New in version 0.9.7
 
 Tuesday, 20 November 2012
