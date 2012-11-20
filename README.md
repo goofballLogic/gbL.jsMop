@@ -176,7 +176,7 @@ e.g.
     	log("A commit message has been sent");
     };
     
-## New in Version 0.9.3
+## Base Version - 0.9.3
 Sunday, 10 June 2012  
 Version 0.9.3  
 
