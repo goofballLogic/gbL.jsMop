@@ -37,10 +37,8 @@ and then
 
     make browser-test
 
-# Version specific notes
-Unless otherwise indicated, the material in the Pervious Versions section still applies
 
-## Up-to-date example (if below==tl;dr)
+# Up-to-date example (if below==tl;dr)
 
 The constructor is divided into two sections:
 
@@ -101,7 +99,10 @@ For this to work, Controller.js would have to include the bootstrapping code whi
 	function Controller() {
 		. . . code (as above) goes here . . .
 	}
-	
+
+
+# Version specific notes
+Unless otherwise indicated, the material in the Pervious Versions section still applies
 
 ## New in version 0.9.7
 
