@@ -41,14 +41,166 @@
       <section>
         <h1>gbL.jsMop</h1>
 
-<p>N.B. Much of the code below has not been tested. For tested examples, see the tests and scenarios included. Feel free to contact me with abuse or questions: disqus at
-<a href="http://goofballLogic.github.com/gbL.jsMop">http://goofballLogic.github.com/gbL.jsMop</a></p>
-
 <h2>Preamble</h2>
 
-<p>This is a library for message passing in javascript. The "mop" in jsMop is an acronym referring to OOP, but "message-oriented" instead of "object-oriented". A central "mop" object is used to send and receive messages (in place of a native message exchange construct).</p>
-
 <p><a href="http://www.purl.org/stefan_ram/pub/doc_kay_oop_en">http://www.purl.org/stefan_ram/pub/doc_kay_oop_en</a></p>
+
+<h2>Sending messages</h2>
+
+<p>When I think about OO, I think of objects like individual biological cells, which can communicate by emitting messages which can be absorbed by nearby cells.</p>
+
+<p>This is a bit different than the normal paradigm in most C-like languages - javascript, C#, Java etc.</p>
+
+<p>Where, in normal javascript, I would write</p>
+
+<pre><code>listView.render(viewData);
+</code></pre>
+
+<p>I would really rather do something like</p>
+
+<pre><code>send.renderViewList(viewData);
+</code></pre>
+
+<p>and have this message picked up by the appropriate view. It means I don't have to retain a reference to the receiving object(s), and it fits the biological model more closely.</p>
+
+<p>In the recipient, I would like to specify messages I will receive. Something like</p>
+
+<pre><code>receive.renderView(viewData);
+</code></pre>
+
+<p>However, this kind of paradigm doesn't really exist at a native level in javascript. You can simulate this kind of thing in many ways, including things like the Observer pattern, Bus architectures and Blackboard patterns/architectures.</p>
+
+<p>I wanted something simple, flexible, but also something that worked with a minimum of effort. So I write the gbL.jsMop script as a workaround.</p>
+
+<h2>tl;dr / Show me the money</h2>
+
+<p>Here we create a <code>mop</code> object, and create+register a <code>Controller</code> object and two <code>View</code> objects. Then I send a "show names" message through the <code>mop</code> which is received by the <code>Controller</code>. The <code>Controller</code> then processes the data into a view model and sends a "render view list" message. The "List" <code>View</code> object receives this message and renders itself using the view model sent by the <code>Controller</code>.</p>
+
+<pre><code>var mop = new gbL.jsMop()
+    .register(new Controller(), "List controller")
+    .register(new View("List"), "List view")
+    .register(new View("AnOther"), "AnOther view")
+    ;
+
+var data = [
+    { name: "Jessie" },
+    { name: "Imran" }
+];
+
+// send a message directly from the mop just for test purposes
+mop.send(data).as("show names");
+
+function Controller() {
+
+    var I = { send: function() {}, receive: {} };
+
+    // messages I send
+    I.send.renderViewList = function(viewData){};
+
+    // messages I receive
+    I.receive.showNames = function(items) {
+        var viewData = generateNameListViewModel(items);
+        I.send.renderViewList(viewData);
+    };
+
+    return I;
+
+    function generateNameListViewModel(items) {
+        . . .
+    }
+}
+
+function View(viewName) {
+
+    var I = { receive: {} };
+
+    // messages I receive
+    I.receive.renderView = function(viewData) {
+        renderSelf(viewData);
+    }
+    // ... but only messages ending with my name
+    I.receive.renderView.filter = function(topics, data) {
+        return topics[topics.length] === viewName;
+    }
+
+    return I;
+
+    function renderSelf(viewData) {
+        . . .
+    }
+}
+</code></pre>
+
+<h2>Modular design</h2>
+
+<p>I also want to be able to divide my code up into dependency-free units. I don't want my constructor functions for each class of object to reference each other at design time any more than I want my objects to reference each other at run-time….</p>
+
+<p>So I added the bootstrap pattern. For example:</p>
+
+<p>main.js</p>
+
+<pre><code>var mop = new gbL.jsMop().boot({
+    "View factory" : require("./viewFactory"),
+    "List controller" : require("./listController"),
+});
+</code></pre>
+
+<p>viewFactory.js</p>
+
+<pre><code>module.exports.init = function(mop) {
+    mop.register(new ViewFactory(mop), "View factory");
+};
+
+function ViewFactory(mop) {
+    var I = { receive: {} };
+
+    // messages I receive
+    I.receive.buildView = function(viewName) {
+        var view = new View(viewName);
+        mop.register(view, viewName + " view");
+    };
+
+    return I;
+}
+
+function View(viewName) {
+    . . .
+}
+</code></pre>
+
+<p>listController.js</p>
+
+<pre><code>module.exports.init = function(mop) {   
+    mop.register(new Controller(), "List controller");
+}
+
+function Controller() {
+
+    var I = { send: function() {}, receive: {} };
+
+    // messages I send
+    I.send.buildView = function(){};
+    I.send.renderViewList = function(viewData){};
+
+    // messages I receive
+    I.receive.showNames = function(items) {
+        ensureListView();
+        var viewData = generateNameListViewModel(items);
+        I.send.renderViewList(viewData);
+    };
+
+    return I;
+
+    function ensureListView() {
+        I.send.buildView("List");
+        ensureListView = function() { }; // naughty
+    }
+
+    function generateNameListViewModel(items) {
+        . . .
+    }
+}
+</code></pre>
 
 <h2>Environment</h2>
 
@@ -153,6 +305,10 @@ function Controller() {
     . . . code (as above) goes here . . .
 }
 </code></pre>
+
+<h1>tl;dr</h1>
+
+<h3>No, really - I mean it. tl;dr</h3>
 
 <h1>Version specific notes</h1>
 
@@ -324,11 +480,9 @@ console.log("Registered receivers: " + registered.join(", ");
 
     var mop;
 
-    context.bootstrap = {
-        init: function(initMop) {
-            mop = initMop;
-            initMop.Register(loggingSingleton, "Console logger");
-        }
+    context.bootstrap = function(initMop) {
+        mop = initMop;
+        initMop.Register(loggingSingleton, "Console logger");
     }
 
     var loggingSingleton = new function() {
@@ -366,11 +520,9 @@ mop.boot({
     var mop;
 
     context.Ticker = {
-        bootstrap: {
-            init: function(jsMop) {
-                mop = jsMop;
-                mop.register(new Ticker(), "Ticker");
-            }
+        bootstrap: function(jsMop) {
+            mop = jsMop;
+            mop.register(new Ticker(), "Ticker");
         }
     };
 
