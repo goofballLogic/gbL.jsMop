@@ -42,7 +42,10 @@ Here we create a <code>mop</code> object, and create+register a <code>Controller
 		{ name: "Imran" }
 	];
 	
-	/* when the "show names" message is sent, the controller would receive it, because it says "I.receive.showNames" (below) */ 
+	/* 
+        When the "show names" message is sent, the controller would 
+	    receive it, because it says "I.receive.showNames"
+	*/ 
 	
     function Controller() {
     
