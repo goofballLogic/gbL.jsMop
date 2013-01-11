@@ -344,6 +344,16 @@
 			return mop;
 		}
 
+		function sendMessageLog(category, topics, args, receiver) {
+			if(topics[0] == "_messageLog") return;
+			mop.send({
+				"topics" : topics,
+				"payload" : args,
+				"subject" : topics.join(" "),
+				"receiver" : receiver
+			}).as("_messageLog", category);
+		}
+
 		function sendWires(node, returned, received) {
 
 			for(var i = 0; i < node.hub.wires.length; i++)
@@ -354,7 +364,7 @@
 					response = null,
 					args = Array.prototype.slice.call(node.payload)
 					;
-				
+
 				if(typeof(wire.handler.filter) == "function") {
 					accepted = wire.handler.filter.call(wire.owner, node.topics, args);
 					if(mop.debug || mop.send.debug) console.log(wire.toString(), "filter returned: ", accepted);
@@ -362,6 +372,7 @@
 				
 				if(accepted) {
 					if(mop.debug || mop.send.debug) console.log(node.hub.toString(), wire.toString(), node.topics, args);
+					sendMessageLog("received", node.topics, args, wire.ownername);
 					response = wire.handler.apply(wire.owner, args);
 				}
 
@@ -394,6 +405,8 @@
 					else
 						topics = Array.prototype.slice.call(arguments);
 
+					sendMessageLog("sent", topics, settings.payload);
+
 					var ret = [],
 						received = 0,
 						node = {
@@ -416,7 +429,9 @@
 					}
 
 					if((mop.debug || mop.send.debug || mop.debug_dropped) && received===0) console.log("Unreceived", node.topics);
-						
+					
+					if(received === 0) sendMessageLog("dropped", node.topics, settings.payload);
+
 					if(!settings.forArray && ret.length === 1) ret = ret[0];
 			
 					return ret;
@@ -444,6 +459,7 @@
 			for(var iUnregister in args) unregisterObject(args[iUnregister]);
 			if(toRethrow!==null) throw(toRethrow);
 		}
+
 
 		return mop;
 	};
