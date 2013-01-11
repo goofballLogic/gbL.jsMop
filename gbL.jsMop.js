@@ -1,6 +1,6 @@
 (function() {
 	
-	// VERSION: 0.9.7
+	// VERSION: 0.13.2
 	// License: MIT
 	
 	// namespace and exports
@@ -350,7 +350,8 @@
 				"topics" : topics,
 				"payload" : args,
 				"subject" : topics.join(" "),
-				"receiver" : receiver
+				"receiver" : receiver,
+				"category" : category
 			}).as("_messageLog", category);
 		}
 

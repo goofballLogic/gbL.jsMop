@@ -22,7 +22,6 @@ describe("Given a hub with registered handlers", function() {
 	mop.register(obj1, "obj 1");
 	mop.register(obj2, "obj 2");
 	mop.registerHandler(["_messageLog"], function(detail) {
-		detail.category = mop.topics[1];
 		log.push(JSON.parse(JSON.stringify(detail)));
 	});
 
