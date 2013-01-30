@@ -10,7 +10,7 @@ describe("Given a hub with registered handlers", function() {
 		receive: { helloWorld : function(message) { } }
 	};
 
-	var obj2 = { 
+	var obj2 = {
 		send: {
 			helloWorld: function(message) { },
 			goodbyeWorld: function(message) { }
@@ -28,7 +28,7 @@ describe("Given a hub with registered handlers", function() {
 	describe("When a message is sent", function() {
 		
 		before(function() {
-			log = []; 
+			log = [];
 			obj2.send.helloWorld("hi there");
 		});
 

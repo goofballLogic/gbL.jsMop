@@ -1,6 +1,6 @@
 (function() {
 	
-	// VERSION: 0.13.2
+	// VERSION: 0.13.4
 	// License: MIT
 	
 	// namespace and exports
@@ -263,6 +263,11 @@
 				var sAction = sendActions[si];
 				installSender(sAction.topics, sAction.action, toRegister, objectName, sAction.substitute);
 			}
+
+			if(toRegister.hasOwnProperty("register") && "function" == typeof toRegister.register) {
+				installRegistrar(toRegister);
+			}
+
 			return mop;
 		}
 
@@ -275,6 +280,7 @@
 			for(var si in sActions) {
 				uninstallSender(sActions[si].action);
 			}
+			uninstallRegistrar(toUnregister);
 			return mop;
 		}
 
@@ -289,6 +295,23 @@
 			removeWiresForHandler(handler, handlerRegister);
 			handlerRegister.remove(handler);
 			return mop;
+		}
+
+		function uninstallRegistrar(factory) {
+			if(factory.hasOwnProperty("register") && "function" == typeof factory.register) {
+				if(factory.register.hasOwnProperty("uninstall") && "function" == typeof factory.register.uninstall) {
+					factory.register.uninstall();
+				}
+			}
+		}
+
+		function installRegistrar(factory) {
+			var target = new MethodDef(factory, "register", "register");
+			var registerShim = function(toRegister, registrantName) {
+				mop.register(toRegister, registrantName);
+			};
+			registerShim.uninstall = function() { target.substitute(target.action); };
+			target.substitute(registerShim);
 		}
 
 		function installSender(topicList, sender, owner, ownerName, substituteSender) {
@@ -461,6 +484,16 @@
 			if(toRethrow!==null) throw(toRethrow);
 		}
 
+		function toJSON(thing) {
+			var seen = [];
+			return JSON.stringify(obj, function(key, val) {
+				if (typeof val == "object") {
+					if (seen.indexOf(val) >= 0) return undefined;
+					seen.push(val);
+				}
+				return val;
+			});
+		}
 
 		return mop;
 	};
