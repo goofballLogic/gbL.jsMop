@@ -4,32 +4,46 @@ var jsMop = require("../gbL.jsMop"),
 
 (function() {
 
+	function Object1(received) {
+		var I = { bus : {}, send: {}, receive: {} };
+
+		var obj2 = null;
+
+		I.bus.register = function() { };
+
+		I.send.helloWorld = function(message) { };
+		I.receive.spawn = buildObject2;
+		I.receive.unspawn = unregisterObject2;
+
+		return I;
+
+		function buildObject2() {
+			// create object
+			obj2 = new Object2(received);
+			I.bus.register(obj2, "Object 2");
+			// send message
+			I.send.helloWorld("hi");
+		}
+
+		function unregisterObject2() {
+			console.log("Unregistering");
+			I.bus.unregister(obj2);
+		}
+
+	}
+
+	function Object2(received) {
+		this.receive = {
+			"helloWorld" : function(message) { received.push(message); }
+		};
+	}
+
 	describe("Given registered object with register member", function() {
 
 		var mop = new jsMop.Mop();
-
-		var obj1 = function() {
-			var I = { register : function() { }, send: {}, receive: {} };
-			I.send.helloWorld = function(message) { };
-			I.receive.spawn = buildObject2;
-			return I;
-
-			function buildObject2() {
-				// create object
-				I.register(new Object2(), "Object 2");
-				// send message
-				I.send.helloWorld("hi");
-			}
-		}();
-
-		mop.register(obj1, "Object 1");
-
 		var received = [];
-		function Object2() {
-			this.receive = {
-				"helloWorld" : function(message) { received.push(message); }
-			};
-		}
+		var obj1 = new Object1(received);
+		mop.register(obj1, "Object 1");
 
 		describe("When object receives message to spawn object2", function() {
 
@@ -52,7 +66,37 @@ var jsMop = require("../gbL.jsMop"),
 					obj1.receive.spawn();
 					mop.send("hi 2").as("hello world");
 
-					expect(received.length).to.equal(1); // would be two if "register" was not unregistered, or three if both "register" and "send" were not unregistered.
+					expect(received.length).to.equal(0); // would be 1 if "register" was not unregistered, or 2 if both "register" and "send" were not unregistered.
+
+				});
+
+			});
+
+		});
+
+	});
+
+	describe("Given registered object with register member", function() {
+
+		var mop = new jsMop.Mop();
+		var received = [];
+		var obj1 = new Object1(received);
+		mop.register(obj1, "Object 1");
+
+		describe("When object receives message to spawn object2", function() {
+
+			mop.send().as("spawn");
+		
+			describe("and when it receives message to unspawn object2", function() {
+
+				mop.send().as("unspawn");
+
+				it("object2 should no longer receive hello worlds", function() {
+
+					received = [];
+					mop.send("hi 3").as("hello world");
+
+					expect(received.length).to.equal(0);
 
 				});
 

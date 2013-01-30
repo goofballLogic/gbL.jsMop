@@ -1,6 +1,6 @@
 (function() {
 	
-	// VERSION: 0.13.4
+	// VERSION: 0.14.0
 	// License: MIT
 	
 	// namespace and exports
@@ -264,8 +264,8 @@
 				installSender(sAction.topics, sAction.action, toRegister, objectName, sAction.substitute);
 			}
 
-			if(toRegister.hasOwnProperty("register") && "function" == typeof toRegister.register) {
-				installRegistrar(toRegister);
+			if(toRegister.hasOwnProperty("bus")) {
+				installBusUtils(toRegister.bus);
 			}
 
 			return mop;
@@ -280,7 +280,9 @@
 			for(var si in sActions) {
 				uninstallSender(sActions[si].action);
 			}
-			uninstallRegistrar(toUnregister);
+			if(toUnregister.hasOwnProperty("bus")) {
+				uninstallBusUtils(toUnregister.bus);
+			}
 			return mop;
 		}
 
@@ -297,21 +299,30 @@
 			return mop;
 		}
 
-		function uninstallRegistrar(factory) {
-			if(factory.hasOwnProperty("register") && "function" == typeof factory.register) {
-				if(factory.register.hasOwnProperty("uninstall") && "function" == typeof factory.register.uninstall) {
-					factory.register.uninstall();
+		function uninstallBusUtils(utils) {
+			var methods = [ "register", "unregister" ];
+			for(var i = 0; i < methods.length; i++) {
+				var method = methods[i];
+				if(utils.hasOwnProperty(method) && "function" == typeof utils[method].uninstall) {
+					utils[method].uninstall();
 				}
 			}
 		}
 
-		function installRegistrar(factory) {
-			var target = new MethodDef(factory, "register", "register");
+		function installBusUtils(utils) {
+			var registerMethod = new MethodDef(utils, "register", "register");
 			var registerShim = function(toRegister, registrantName) {
 				mop.register(toRegister, registrantName);
 			};
-			registerShim.uninstall = function() { target.substitute(target.action); };
-			target.substitute(registerShim);
+			registerShim.uninstall = function() { registerMethod.substitute(registerMethod.action); };
+			registerMethod.substitute(registerShim);
+			
+			var unregisterMethod = new MethodDef(utils, "unregister", "unregister");
+			var unregisterShim = function(toUnregister) {
+				mop.unregister(toUnregister);
+			};
+			unregisterShim.uninstall = function() { unregisterMethod.substitute(unregisterMethod.action); };
+			unregisterMethod.substitute(unregisterShim);
 		}
 
 		function installSender(topicList, sender, owner, ownerName, substituteSender) {
