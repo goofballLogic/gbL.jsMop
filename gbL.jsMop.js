@@ -1,8 +1,8 @@
 (function() {
-	
-	// VERSION: 0.14.0
+
+	// VERSION: 0.14.1
 	// License: MIT
-	
+
 	// namespace and exports
 	var jsMop = (typeof(module) == "undefined") ?
 		((window.gbL = window.gbL || {}).jsMop = {}) :
@@ -182,7 +182,7 @@
 	// mop constructor
 
 	jsMop.Mop = function() {
-	
+
 		var rootHub = new Hub("root"),
 			handlerRegister = new HandlerRegister()
 			;
@@ -316,7 +316,7 @@
 			};
 			registerShim.uninstall = function() { registerMethod.substitute(registerMethod.action); };
 			registerMethod.substitute(registerShim);
-			
+
 			var unregisterMethod = new MethodDef(utils, "unregister", "unregister");
 			var unregisterShim = function(toUnregister) {
 				mop.unregister(toUnregister);
@@ -362,7 +362,7 @@
 					nhub = new Hub(topic, hub);
 					hub.hubs.push(nhub);
 				}
-				
+
 				hub = nhub;
 			}
 
@@ -374,7 +374,7 @@
 			registration.push(wire);
 
 			if(mop.debug || mop.registerHandler.debug) console.log("Registered", ownerName || "anon.", topicListCopy, wire, hub);
-			
+
 			return mop;
 		}
 
@@ -404,14 +404,14 @@
 					accepted = wire.handler.filter.call(wire.owner, node.topics, args);
 					if(mop.debug || mop.send.debug) console.log(wire.toString(), "filter returned: ", accepted);
 				}
-				
+
 				if(accepted) {
 					if(mop.debug || mop.send.debug) console.log(node.hub.toString(), wire.toString(), node.topics, args);
 					sendMessageLog("received", node.topics, args, wire.ownername);
 					response = wire.handler.apply(wire.owner, args);
+					received++;
 				}
 
-				received++;
 				if(response!==null) returned.push(response);
 				navState.undo();
 			}
@@ -452,7 +452,7 @@
 						},
 						topic = topics.shift()
 						;
-					
+
 					received = sendWires.call(this, node, ret, received);
 
 					while(node.hub!==null && typeof(topic) != "undefined") {
@@ -464,11 +464,11 @@
 					}
 
 					if((mop.debug || mop.send.debug || mop.debug_dropped) && received===0) console.log("Unreceived", node.topics);
-					
+
 					if(received === 0) sendMessageLog("dropped", node.topics, settings.payload);
 
 					if(!settings.forArray && ret.length === 1) ret = ret[0];
-			
+
 					return ret;
 				}
 

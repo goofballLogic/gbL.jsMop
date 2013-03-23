@@ -26,7 +26,6 @@ var jsMop = require("../gbL.jsMop"),
 		}
 
 		function unregisterObject2() {
-			console.log("Unregistering");
 			I.bus.unregister(obj2);
 		}
 
@@ -86,7 +85,7 @@ var jsMop = require("../gbL.jsMop"),
 		describe("When object receives message to spawn object2", function() {
 
 			mop.send().as("spawn");
-		
+
 			describe("and when it receives message to unspawn object2", function() {
 
 				mop.send().as("unspawn");

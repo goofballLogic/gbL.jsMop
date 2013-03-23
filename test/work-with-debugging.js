@@ -5,7 +5,7 @@ var jsmop = require("../gbL.jsMop"),
 var mop = new jsmop.Mop();
 
 describe("Given a hub with registered handlers", function() {
-	
+
 	var obj1 = {
 		receive: { helloWorld : function(message) { } }
 	};
@@ -13,20 +13,27 @@ describe("Given a hub with registered handlers", function() {
 	var obj2 = {
 		send: {
 			helloWorld: function(message) { },
-			goodbyeWorld: function(message) { }
+			goodbyeWorld: function(message) { },
+			sometimesWorld: function(message) { }
 		}
 	};
+
+	var obj3 = {
+		receive: { sometimesWorld: function(message) { } }
+	};
+	obj3.receive.sometimesWorld.filter = function(topics, payload) { return "magic" == payload[0]; };
 
 	var log = [];
 
 	mop.register(obj1, "obj 1");
 	mop.register(obj2, "obj 2");
+	mop.register(obj3, "obj 3");
 	mop.registerHandler(["_messageLog"], function(detail) {
 		log.push(JSON.parse(JSON.stringify(detail)));
 	});
 
 	describe("When a message is sent", function() {
-		
+
 		before(function() {
 			log = [];
 			obj2.send.helloWorld("hi there");
@@ -51,7 +58,7 @@ describe("Given a hub with registered handlers", function() {
 
 	describe("When an unreceived message is sent", function() {
 
-		before(function() { 
+		before(function() {
 			log = [];
 			obj2.send.goodbyeWorld("yo momma");
 		});
@@ -63,6 +70,20 @@ describe("Given a hub with registered handlers", function() {
 			expect(log[1].subject).to.eql("goodbye world");
 		});
 
+	});
+
+	describe("When a message which is unreceived due to filtering", function() {
+
+		before(function() {
+			log = [];
+			obj2.send.sometimesWorld("not magic");
+			obj2.send.sometimesWorld("magic");
+		});
+
+		it("one message drop should be logged", function() {
+			expect(log[1].category).to.eql("dropped");
+			expect(log[3].category).to.eql("received");
+		});
 	});
 
 });

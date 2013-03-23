@@ -25,8 +25,10 @@ mop.register(receiver, "Receiver").register(sender, "Sender");
 
 var snapshot = profiler.takeSnapshot("test");
 profiler.startProfiling("test");
+
 for(var i = 0; i < 1000; i++) {
 	sender.send.helloWorld("hi");
 }
+
 profiler.stopProfiling("test");
-process.stdin.resume();
+
