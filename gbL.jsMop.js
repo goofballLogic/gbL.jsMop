@@ -1,6 +1,6 @@
 (function() {
 
-	// VERSION: 0.14.1
+	// VERSION: 0.14.2
 	// License: MIT
 
 	// namespace and exports
@@ -99,7 +99,7 @@
 		var ret = [],
 			topic = "";
 
-		for(var i in name) {
+		for(var i = 0; i < name.length; i++) {
 			if(topic==="") {
 				topic += name[i];
 			} else {
