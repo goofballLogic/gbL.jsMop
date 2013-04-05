@@ -1,6 +1,6 @@
 (function() {
 
-	// VERSION: 0.14.2
+	// VERSION: 0.14.3
 	// License: MIT
 
 	// namespace and exports
@@ -143,6 +143,11 @@
 		this.toString = function() {
 			return "[ Hub: " + topic + " ]";
 		};
+		this.reset = function() {
+			for(var i = 0; i < this.hubs.length; i++) this.hubs[i].reset();
+			this.hubs = [];
+			this.wires = [];
+		};
 	};
 
 	var Wire = function(handler, owner, hub, ownername) {
@@ -245,6 +250,11 @@
 			for(var i in handlerList){
 				mop.unregisterHandler(handlerList[i]);
 			}
+
+			// memory leak safety
+			handlerRegister = new HandlerRegister();
+			rootHub.reset();
+
 			return mop;
 		}
 
