@@ -1,6 +1,6 @@
 (function() {
 
-	// VERSION: 0.14.3
+	// VERSION: 0.14.4
 	// License: MIT
 
 	// namespace and exports
@@ -189,7 +189,8 @@
 	jsMop.Mop = function() {
 
 		var rootHub = new Hub("root"),
-			handlerRegister = new HandlerRegister()
+			handlerRegister = new HandlerRegister(),
+			resetEventHandlers = []
 			;
 
 		// revealed members
@@ -246,6 +247,10 @@
 		}
 
 		function reset() {
+
+			resetEventHandlers.forEach(function(handler) { handler(); });
+			resetEventHandlers = [];
+
 			var handlerList = handlerRegister.listHandlers();
 			for(var i in handlerList){
 				mop.unregisterHandler(handlerList[i]);
@@ -310,7 +315,7 @@
 		}
 
 		function uninstallBusUtils(utils) {
-			var methods = [ "register", "unregister" ];
+			var methods = [ "register", "unregister", "onReset" ];
 			for(var i = 0; i < methods.length; i++) {
 				var method = methods[i];
 				if(utils.hasOwnProperty(method) && "function" == typeof utils[method].uninstall) {
@@ -333,6 +338,14 @@
 			};
 			unregisterShim.uninstall = function() { unregisterMethod.substitute(unregisterMethod.action); };
 			unregisterMethod.substitute(unregisterShim);
+
+			if(utils.hasOwnProperty("onReset") && "function" == typeof utils.onReset) {
+				resetEventHandlers.push(utils.onReset);
+				utils.onReset.uninstall = function() {
+					delete utils.onReset.uninstall;
+					resetEventHandlers.splice(resetEventHandlers.indexOf(utils.onReset), 1);
+				};
+			}
 		}
 
 		function installSender(topicList, sender, owner, ownerName, substituteSender) {
